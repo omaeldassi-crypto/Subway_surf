@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cyber Runner Multiplayer</title>
+    
+    <!-- Inclusion des bibliothèques Three.js et Socket.io -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+
+    <style>
+        /* --- STYLE DE BASE --- */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+        }
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #050510;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #fff;
+        }
+
+        /* --- CONTENEUR DU JEU 3D --- */
+        #game-container {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+
+        /* --- INTERFACE EN JEU (HUD) --- */
+        #hud-score {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            font-size: 24px;
+            font-weight: bold;
+            color: #ff0055;
+            text-shadow: 0 0 10px rgba(255, 0, 87, 0.5);
+            background: rgba(0, 0, 0, 0.5);
+            padding: 10px 20px;
+            border-radius: 4px;
+            z-index: 10;
+        }
+
+        /* --- UI MULTIJOUEUR (CLASSEMENT) --- */
+        #leaderboard-box {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(10, 10, 25, 0.85);
+            border: 2px solid #00ffcc;
+            box-shadow: 0 0 15px rgba(0, 255, 204, 0.2);
+            border-radius: 8px;
+            padding: 15px;
+            width: 220px;
+            z-index: 10;
+        }
+        #leaderboard-box h3 {
+            color: #00ffcc;
+            font-size: 14px;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .leaderboard-item {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            margin-bottom: 5px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            padding-bottom: 3px;
+        }
+
+        /* --- BOÎTIER D'AIDE TCHAT RAPIDE --- */
+        #chat-help {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            border-left: 3px solid #ff0055;
+            padding: 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            color: #ccc;
+            line-height: 1.6;
+            z-index: 10;
+        }
+
+        /* --- ÉCRAN DE GAME OVER --- */
+        #game-over-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(5, 5, 15, 0.9);
+            display: none; /* Masqué par défaut */
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 20;
+        }
+        #game-over-screen h1 {
+            font-size: 48px;
+            color: #ff0055;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        #game-over-screen p {
+            font-size: 20px;
+            margin-bottom: 25px;
+            color: #aaa;
+        }
+        .btn-restart {
+            padding: 12px 30px;
+            font-size: 16px;
+            font-weight: bold;
+            color: #050510;
+            background: #00ffcc;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: 0.2s ease;
+        }
+        .btn-restart:hover {
+            background: #ff0055;
+            color: #fff;
+            box-shadow: 0 0 15px #ff0055;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Zone d'affichage du score en direct -->
+    <div id="hud-score">Score: 0</div>
+
+    <!-- UI Classement dynamique (Multi) -->
+    <div id="leaderboard-box">
+        <h3>🏆 Classement</h3>
+        <div id="leaderboard-list">
+            <!-- Géré en temps réel par main.js -->
+        </div>
+    </div>
+
+    <!-- Boîtier d'aide pour le Tchat -->
+    <div id="chat-help">
+        💬 <b>Tchat Rapide :</b><br>
+        <span style="color: #00ffcc;">[1]</span> Trop lent ! 🏃‍♂️<br>
+        <span style="color: #00ffcc;">[2]</span> Aïe ! 💥<br>
+        <span style="color: #00ffcc;">[3]</span> Regarde derrière toi ! 👀
+    </div>
+
+    <!-- Conteneur principal pour le rendu WebGL/Three.js -->
+    <div id="game-container"></div>
+
+    <!-- Écran de fin de partie -->
+    <div id="game-over-screen">
+        <h1>Game Over</h1>
+        <p>Distance parcourue : <span id="final-score" style="color: #00ffcc; font-weight: bold;">0</span>m</p>
+        <button class="btn-restart" onclick="window.location.reload()">Rejouer</button>
+    </div>
+
+    <!-- Chargement de tes scripts de jeu (Vérifie bien tes majuscules/minuscules) -->
+    <script src="/storage/0806-422F/Android/data/com.android.chrome/files/Download/game/js/Player.js"></script>
+    <script src="/storage/0806-422F/Android/data/com.android.chrome/files/Download/game/js/TrackSoloManager.js"></script>
+    <script src="/storage/0806-422F/Android/data/com.android.chrome/files/Download/game/js/main.js"></script>
+
+</body>
+</html>
