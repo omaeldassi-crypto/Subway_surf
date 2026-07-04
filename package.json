@@ -1,0 +1,16 @@
+{
+  "name": "cyber-runner-arena",
+  "version": "1.0.0",
+  "description": "Jeu 3D multijoueur avec Three.js et Socket.io",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "socket.io": "^4.7.2"
+  },
+  "author": "",
+  "license": "ISC"
+}
